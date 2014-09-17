@@ -27,20 +27,20 @@ import webbrowser
 
 url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 
-br = mechanize.Browser()
+def get_list():
+    br = mechanize.Browser()
 
-# Necessary for Amazon.com
-br.set_handle_robots(False)
-br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
-br.set_handle_referer(True)
-br.set_handle_redirect(mechanize.HTTPRedirectHandler)
-#br.set_handle_refresh(False)
-#br.set_handle_refresh(mechanize.HTTPRefreshProcessor(), max_time=1)
-#br.set_debug_http(True)
-#br.set_debug_redirects(True)
-#br.set_debug_responses(True)
+    # Necessary for Amazon.com
+    br.set_handle_robots(False)
+    br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
+    #br.set_handle_referer(True)
+    #br.set_handle_redirect(mechanize.HTTPRedirectHandler)
+    #br.set_handle_refresh(False)
+    #br.set_handle_refresh(mechanize.HTTPRefreshProcessor(), max_time=1)
+    #br.set_debug_http(True)
+    #br.set_debug_redirects(True)
+    #br.set_debug_responses(True)
 
-while True:
     while True:
         print 'Reading', url
         try:
@@ -58,49 +58,10 @@ while True:
     br['email'] = os.getenv('AMAZON_USERID')
     br['password'] = os.getenv('AMAZON_PASSWORD')
 
-    try:
-        print 'Logging in ...'
-        response = br.submit()
-        print response.geturl()
-        break
-    except urllib2.HTTPError as e:
-        print e
-    except urllib2.URLError as e:
-        print 'URL Error', e
-    except Exception as e:
-        print 'General Error', e
-
-# We've logged in, so load the page we want
-#print 'Loading', url
-#br.open(url)
-
-#print response.info()
-
-print 'Reading response ...'
-html = response.read()
-print 'Parsing response ...'
-soup = BeautifulSoup(html)
-
-# Get initial list of items
-list = set()
-for link in soup.find_all('a'):
-    l = link.get('href')
-    if l:
-        m = re.search('asin=([0-9A-Z]*)', link.get('href'))
-        if m:
-            list.add(m.group(1))
-
-print list
-
-while True:
-    print 'Waiting ...'
-    time.sleep(1 * 60)
-
     while True:
-        print 'Reloading ...'
         try:
-            response = br.reload()
-            print response.geturl()
+            print 'Logging in ...'
+            response = br.submit()
             break
         except urllib2.HTTPError as e:
             print e
@@ -109,16 +70,35 @@ while True:
         except Exception as e:
             print 'General Error', e
 
-    print 'Parsing response ...'
+    print 'Reading response ...'
     html = response.read()
+    br.close()
+    print 'Parsing response ...'
     soup = BeautifulSoup(html)
 
+    list = set()
     for link in soup.find_all('a'):
         l = link.get('href')
         if l:
             m = re.search('asin=([0-9A-Z]*)', link.get('href'))
             if m:
-                if m.group(1) not in list:
-                    print m.group(1)
-                    # https://www.amazon.com/gp/vine/product?ie=UTF8&asin=B000A13OF2&tab=US_Default
+                list.add(m.group(1))
+
+    return list
+
+
+list = set()
+list2 = set()
+
+while True:
+    list2 = get_list()
+    print list2
+    if list:
+        for link in list2:
+            if link not in list:
+                print "new =", link
+
+    print 'Waiting ...'
+    list = list2
+    time.sleep(10 * 60)
 
