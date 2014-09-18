@@ -20,7 +20,6 @@ import os
 import re
 import time
 import urllib2
-#import HTMLParser
 from bs4 import BeautifulSoup
 import mechanize
 import webbrowser
@@ -33,13 +32,6 @@ def get_list():
     # Necessary for Amazon.com
     br.set_handle_robots(False)
     br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
-    #br.set_handle_referer(True)
-    #br.set_handle_redirect(mechanize.HTTPRedirectHandler)
-    #br.set_handle_refresh(False)
-    #br.set_handle_refresh(mechanize.HTTPRefreshProcessor(), max_time=1)
-    #br.set_debug_http(True)
-    #br.set_debug_redirects(True)
-    #br.set_debug_responses(True)
 
     while True:
         print 'Reading', url
@@ -87,18 +79,20 @@ def get_list():
     return list
 
 
-list = set()
+list = get_list()
 list2 = set()
 
 while True:
-    list2 = get_list()
-    print list2
-    if list:
-        for link in list2:
-            if link not in list:
-                print "new =", link
-
     print 'Waiting ...'
-    list = list2
     time.sleep(10 * 60)
+
+    list2 = get_list()
+
+    for link in list2:
+        if link not in list:
+            print 'New item:', link
+            webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_LastChance' % link)
+            break
+
+    list = list2
 
