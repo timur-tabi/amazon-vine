@@ -44,6 +44,7 @@ def get_list():
             print 'URL Error', e
         except Exception as e:
             print 'General Error', e
+            sys.exit(1)
 
     # Select the sign-in form
     br.select_form(name='signIn')
@@ -61,6 +62,7 @@ def get_list():
             print 'URL Error', e
         except Exception as e:
             print 'General Error', e
+            sys.exit(1)
 
     print 'Reading response ...'
     html = response.read()
