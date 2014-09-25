@@ -25,36 +25,27 @@ import mechanize
 import webbrowser
 
 url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
+minutes_to_wait = 10
 
 def get_list():
-    br = mechanize.Browser()
-
-    # Necessary for Amazon.com
-    br.set_handle_robots(False)
-    br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
-
     while True:
-        print 'Reading', url
+        br = mechanize.Browser()
+
+        # Necessary for Amazon.com
+        br.set_handle_robots(False)
+        br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
+
         try:
+            print 'Reading', url
             br.open(url)
-            break
-        except urllib2.HTTPError as e:
-            print e
-        except urllib2.URLError as e:
-            print 'URL Error', e
-        except Exception as e:
-            print 'General Error', e
-            sys.exit(1)
 
-    # Select the sign-in form
-    br.select_form(name='signIn')
-    br['email'] = os.getenv('AMAZON_USERID')
-    br['password'] = os.getenv('AMAZON_PASSWORD')
-
-    while True:
-        try:
             print 'Logging in ...'
+            # Select the sign-in form
+            br.select_form(name='signIn')
+            br['email'] = os.getenv('AMAZON_USERID')
+            br['password'] = os.getenv('AMAZON_PASSWORD')
             response = br.submit()
+
             break
         except urllib2.HTTPError as e:
             print e
@@ -62,6 +53,8 @@ def get_list():
             print 'URL Error', e
         except Exception as e:
             print 'General Error', e
+            print br
+            print br.forms()
             sys.exit(1)
 
     print 'Reading response ...'
@@ -85,8 +78,8 @@ list = get_list()
 list2 = set()
 
 while True:
-    print 'Waiting ...'
-    time.sleep(10 * 60)
+    print 'Waiting %u minute%s ...' % (minutes_to_wait, 's'[minutes_to_wait == 1:])
+    time.sleep(minutes_to_wait * 60)
 
     list2 = get_list()
 
