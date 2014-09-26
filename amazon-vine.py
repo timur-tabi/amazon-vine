@@ -24,10 +24,15 @@ from bs4 import BeautifulSoup
 import mechanize
 import webbrowser
 
+import getpass
+from optparse import OptionParser
+
 url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 minutes_to_wait = 10
 
 def get_list():
+    global options
+
     while True:
         br = mechanize.Browser()
 
@@ -36,14 +41,14 @@ def get_list():
         br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
 
         try:
-            print 'Reading', url
+            print 'Opening Amazon Vine website'
             br.open(url)
 
             print 'Logging in ...'
             # Select the sign-in form
             br.select_form(name='signIn')
-            br['email'] = os.getenv('AMAZON_USERID')
-            br['password'] = os.getenv('AMAZON_PASSWORD')
+            br['email'] = options.email
+            br['password'] = options.password
             response = br.submit()
 
             break
@@ -73,6 +78,25 @@ def get_list():
 
     return list
 
+parser = OptionParser(usage="usage: %prog [options]")
+parser.add_option("-e", dest="email",
+    help="Amazon.com email address (default is AMAZON_EMAIL environment variable)",
+    type="string", default=os.getenv('AMAZON_EMAIL'))
+parser.add_option("-p", dest="password",
+    help="Amazon.com password (default is AMAZON_PASSWORD environment variable)",
+    type="string", default=os.getenv('AMAZON_PASSWORD'))
+
+(options, args) = parser.parse_args()
+
+if not options.email:
+    options.email = raw_input('Amazon.com email address: ')
+    if not options.email:
+        sys.exit(0)
+
+if not options.password:
+    options.password = getpass.getpass('Amazon.com password: ')
+    if not options.password:
+        sys.exit(0)
 
 list = get_list()
 list2 = set()
