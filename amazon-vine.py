@@ -44,7 +44,7 @@ def get_list():
             print 'Opening Amazon Vine website'
             br.open(url)
 
-            print 'Logging in ...'
+            print 'Logging in'
             # Select the sign-in form
             br.select_form(name='signIn')
             br['email'] = options.email
@@ -62,10 +62,10 @@ def get_list():
             print br.forms()
             sys.exit(1)
 
-    print 'Reading response ...'
+    print 'Reading response'
     html = response.read()
     br.close()
-    print 'Parsing response ...'
+    print 'Parsing response'
     soup = BeautifulSoup(html)
 
     list = set()
@@ -76,6 +76,7 @@ def get_list():
             if m:
                 list.add(m.group(1))
 
+    print 'Found %u items' % len(list)
     return list
 
 parser = OptionParser(usage="usage: %prog [options]")
@@ -102,7 +103,7 @@ list = get_list()
 list2 = set()
 
 while True:
-    print 'Waiting %u minute%s ...' % (minutes_to_wait, 's'[minutes_to_wait == 1:])
+    print 'Waiting %u minute%s' % (minutes_to_wait, 's'[minutes_to_wait == 1:])
     time.sleep(minutes_to_wait * 60)
 
     list2 = get_list()
