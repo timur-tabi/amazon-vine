@@ -23,6 +23,7 @@ import urllib2
 from bs4 import BeautifulSoup
 import mechanize
 import webbrowser
+import datetime
 
 import getpass
 from optparse import OptionParser
@@ -110,9 +111,8 @@ while True:
 
     for link in list2:
         if link not in list:
-            print 'New item:', link
+            print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), 'New item:', link
             webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_Default' % link)
-            break
 
     list = list2
 
