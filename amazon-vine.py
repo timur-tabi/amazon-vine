@@ -111,7 +111,7 @@ while True:
     for link in list2:
         if link not in list:
             print 'New item:', link
-            webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_LastChance' % link)
+            webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_Default' % link)
             break
 
     list = list2
