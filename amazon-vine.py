@@ -17,7 +17,6 @@
 
 import sys
 import os
-import re
 import time
 import urllib2
 from bs4 import BeautifulSoup
@@ -70,12 +69,8 @@ def get_list():
     soup = BeautifulSoup(html)
 
     list = set()
-    for link in soup.find_all('a'):
-        l = link.get('href')
-        if l:
-            m = re.search('asin=([0-9A-Z]*)', link.get('href'))
-            if m:
-                list.add(m.group(1))
+    for link in soup.find_all('tr', {'class':'v_newsletter_item'}):
+        list.add(link['id'])
 
     print 'Found %u items' % len(list)
     return list
@@ -101,7 +96,6 @@ if not options.password:
         sys.exit(0)
 
 list = get_list()
-list2 = set()
 
 while True:
     print 'Waiting %u minute%s' % (minutes_to_wait, 's'[minutes_to_wait == 1:])
