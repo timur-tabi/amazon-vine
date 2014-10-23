@@ -72,6 +72,13 @@ def get_list():
     for link in soup.find_all('tr', {'class':'v_newsletter_item'}):
         list.add(link['id'])
 
+    if len(list) == 0:
+        with open('debug.html', 'w') as f:
+            print >>f, html
+        with open('debug.txt', 'w') as f:
+            for link in soup.find_all('tr', {'class':'v_newsletter_item'}):
+                print >>f, link
+
     print 'Found %u items' % len(list)
     return list
 
@@ -102,6 +109,10 @@ while True:
     time.sleep(minutes_to_wait * 60)
 
     list2 = get_list()
+
+    # if there are no items, then assume that it's a glitch, and try again
+    if not list2:
+        continue
 
     for link in list2:
         if link not in list:
