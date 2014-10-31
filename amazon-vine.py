@@ -27,10 +27,12 @@ import datetime
 import getpass
 from optparse import OptionParser
 
-url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
+your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
+vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
+
 minutes_to_wait = 10
 
-def get_list():
+def get_list(url, name):
     global options
 
     while True:
@@ -41,7 +43,7 @@ def get_list():
         br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
 
         try:
-            print 'Opening Amazon Vine website'
+            print 'Opening %s website' % name
             br.open(url)
 
             print 'Logging in'
@@ -102,22 +104,34 @@ if not options.password:
     if not options.password:
         sys.exit(0)
 
-list = get_list()
+your_queue_list = get_list(your_queue_url, "Youe Queue")
+vine_for_all_list = get_list(vine_for_all_url, "Vine For All")
 
 while True:
     print 'Waiting %u minute%s' % (minutes_to_wait, 's'[minutes_to_wait == 1:])
     time.sleep(minutes_to_wait * 60)
 
-    list2 = get_list()
-
-    # if there are no items, then assume that it's a glitch, and try again
-    if not list2:
-        continue
-
-    for link in list2:
-        if link not in list:
+    your_queue_list2 = get_list(your_queue_url, "Youe Queue")
+    for link in your_queue_list2:
+        if link not in your_queue_list:
             print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), 'New item:', link
             webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_Default' % link)
 
-    list = list2
+    # If there are no items, then assume that it's a glitch.  Otherwise, the
+    # next pass will think that all items are new and will open a bunch of
+    # browser windows.
+    if your_queue_list2:
+        your_queue_list = your_queue_list2
+
+    vine_for_all_list2 = get_list(vine_for_all_url, "Vine For All")
+    for link in vine_for_all_list2:
+        if link not in vine_for_all_list:
+            print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), 'New item:', link
+            webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_LastChance' % link)
+
+    # If there are no items, then assume that it's a glitch.  Otherwise, the
+    # next pass will think that all items are new and will open a bunch of
+    # browser windows.
+    if vine_for_all_list2:
+        vine_for_all_list = vine_for_all_list2
 
