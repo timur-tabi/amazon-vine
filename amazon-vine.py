@@ -30,8 +30,6 @@ from optparse import OptionParser
 your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
 
-minutes_to_wait = 10
-
 def get_list(url, name):
     global options
 
@@ -75,6 +73,7 @@ def get_list(url, name):
         list.add(link['id'])
 
     if len(list) == 0:
+        print datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         with open('debug.html', 'w') as f:
             print >>f, html
         with open('debug.txt', 'w') as f:
@@ -91,6 +90,9 @@ parser.add_option("-e", dest="email",
 parser.add_option("-p", dest="password",
     help="Amazon.com password (default is AMAZON_PASSWORD environment variable)",
     type="string", default=os.getenv('AMAZON_PASSWORD'))
+parser.add_option("-w", dest="wait",
+    help="Number of minutes to wait between iterations (default is %default minutes)",
+    type="int", default=10)
 
 (options, args) = parser.parse_args()
 
@@ -108,8 +110,8 @@ your_queue_list = get_list(your_queue_url, "Youe Queue")
 vine_for_all_list = get_list(vine_for_all_url, "Vine For All")
 
 while True:
-    print 'Waiting %u minute%s' % (minutes_to_wait, 's'[minutes_to_wait == 1:])
-    time.sleep(minutes_to_wait * 60)
+    print 'Waiting %u minute%s' % (options.wait, 's'[options.wait == 1:])
+    time.sleep(options.wait * 60)
 
     your_queue_list2 = get_list(your_queue_url, "Youe Queue")
     for link in your_queue_list2:
