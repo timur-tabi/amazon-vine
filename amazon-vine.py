@@ -27,6 +27,13 @@ import datetime
 import getpass
 from optparse import OptionParser
 
+# If we're on a Mac, use Quartz to read the current Display ID, and store it.
+# This only works if the user has launched the script while logged into his
+# account on the GUI.
+if sys.platform == "darwin":
+    from Quartz import CGMainDisplayID
+    display_id = CGMainDisplayID()
+
 your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
 
@@ -83,6 +90,30 @@ def get_list(url, name):
     print 'Found %u items' % len(list)
     return list
 
+# Return True if the display is off
+def asleep_mac():
+    global display_id
+
+    import re
+    import subprocess
+
+    # The pmset program can tell us if the display is on, off, or asleep
+    output = subprocess.check_output(['pmset','-g','powerstate','AppleDisplay'])
+    m = re.search('^AppleDisplay.*USEABLE', output, re.MULTILINE)
+    if not m:
+        # Display is turned off or asleep
+        return True
+
+    # If the Display ID has changed, then we've fast-switched to another
+    # user, and so it's the same thing as being asleep.
+    return display_id != CGMainDisplayID()
+
+def asleep():
+    if sys.platform == "darwin":
+        return asleep_mac()
+
+    return False
+
 parser = OptionParser(usage="usage: %prog [options]")
 parser.add_option("-e", dest="email",
     help="Amazon.com email address (default is AMAZON_EMAIL environment variable)",
@@ -112,6 +143,8 @@ vine_for_all_list = get_list(vine_for_all_url, "Vine For All")
 while True:
     print 'Waiting %u minute%s' % (options.wait, 's'[options.wait == 1:])
     time.sleep(options.wait * 60)
+    if asleep():
+        continue
 
     your_queue_list2 = get_list(your_queue_url, "Youe Queue")
     for link in your_queue_list2:
@@ -136,4 +169,3 @@ while True:
     # browser windows.
     if vine_for_all_list2:
         vine_for_all_list = vine_for_all_list2
-
