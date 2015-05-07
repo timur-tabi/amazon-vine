@@ -108,9 +108,26 @@ def asleep_mac():
     # user, and so it's the same thing as being asleep.
     return display_id != CGMainDisplayID()
 
+def asleep_linux():
+    global options
+
+    import subprocess
+
+    try:
+        output = subprocess.check_output(['xprintidle'])
+        idle_ms = int(output)
+
+        # If the
+        return idle_ms > (options.wait * 60 * 1000)
+    except:
+        return False
+
 def asleep():
     if sys.platform == "darwin":
         return asleep_mac()
+
+    if sys.platform.startswith('linux'):
+        return asleep_linux()
 
     return False
 
