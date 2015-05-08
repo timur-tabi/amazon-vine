@@ -17,6 +17,7 @@
 
 import sys
 import os
+import re
 import time
 import urllib2
 from bs4 import BeautifulSoup
@@ -75,11 +76,13 @@ def get_list(url, name):
     print 'Parsing response'
     soup = BeautifulSoup(html)
 
-    list = set()
+    asins = set()
     for link in soup.find_all('tr', {'class':'v_newsletter_item'}):
-        list.add(link['id'])
+        if link['id'] in asins:
+            print 'Duplicate in-stock item:', link['id']
+        asins.add(link['id'])
 
-    if len(list) == 0:
+    if len(asins) == 0:
         print datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         with open('debug.html', 'w') as f:
             print >>f, html
@@ -87,14 +90,26 @@ def get_list(url, name):
             for link in soup.find_all('tr', {'class':'v_newsletter_item'}):
                 print >>f, link
 
-    print 'Found %u items' % len(list)
-    return list
+    # Find list of out-of-stock items.  All of items listed in the
+    # 'vineInitalJson' variable are out of stock.  Also, Amazon's web
+    # developers don't know how to spell.  "Inital"?  Seriously?
+    for script in soup.find_all('script', {'type':'text/javascript'}):
+        for s in script.findAll(text=True):
+            m = re.search(r'^.*vineInitalJson.*', s, re.MULTILINE)
+            if m:
+                # {asin:"B007XPLI56"},
+                oos = re.findall('{asin:"([^"]*)"}', s.encode('ascii','ignore'))
+
+                # Remove all out-of-stock items from our list
+                asins.difference_update(oos)
+
+    print 'Found %u items' % len(asins)
+    return asins
 
 # Return True if the display is off
 def asleep_mac():
     global display_id
 
-    import re
     import subprocess
 
     # The pmset program can tell us if the display is on, off, or asleep
