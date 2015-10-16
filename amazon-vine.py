@@ -95,10 +95,10 @@ def get_list(url, name):
     # developers don't know how to spell.  "Inital"?  Seriously?
     for script in soup.find_all('script', {'type':'text/javascript'}):
         for s in script.findAll(text=True):
-            m = re.search(r'^.*vineInitalJson.*', s, re.MULTILINE)
+            m = re.search(r'^.*vineInitalJson(.*?)$', s, re.MULTILINE)
             if m:
                 # {asin:"B007XPLI56"},
-                oos = re.findall('{asin:"([^"]*)"}', s.encode('ascii','ignore'))
+                oos = re.findall('{"asin":"([^"]*)"}', m.group(0).encode('ascii','ignore'))
 
                 # Remove all out-of-stock items from our list
                 asins.difference_update(oos)
