@@ -24,16 +24,10 @@ from bs4 import BeautifulSoup
 import mechanize
 import webbrowser
 import datetime
+import subprocess
 
 import getpass
 from optparse import OptionParser
-
-# If we're on a Mac, use Quartz to read the current Display ID, and store it.
-# This only works if the user has launched the script while logged into his
-# account on the GUI.
-if sys.platform == "darwin":
-    from Quartz import CGMainDisplayID
-    display_id = CGMainDisplayID()
 
 your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
@@ -108,25 +102,42 @@ def get_list(url, name):
 
 # Return True if the display is off
 def asleep_mac():
-    global display_id
+    from Quartz import CGMainDisplayID
 
-    import subprocess
+    # A hackish way to create a static local variable in Python
+    if not hasattr(asleep_mac, "once"):
+        asleep_mac.once = False
 
-    # The pmset program can tell us if the display is on, off, or asleep
-    output = subprocess.check_output(['pmset','-g','powerstate','AppleDisplay'])
-    m = re.search('^AppleDisplay.*USEABLE', output, re.MULTILINE)
-    if not m:
-        # Display is turned off or asleep
-        return True
+        # If we're on a Mac, use Quartz to read the current Display ID, and
+        # store it. This only works if the user has launched the script
+        # while logged into his account on the GUI.
+        asleep_mac.display_id = CGMainDisplayID()
 
-    # If the Display ID has changed, then we've fast-switched to another
-    # user, and so it's the same thing as being asleep.
-    return display_id != CGMainDisplayID()
+    try:
+        # The pmset program can tell us if the display is on, off, or asleep
+        output = subprocess.check_output(['pmset','-g','powerstate','AppleDisplay'])
+        m = re.search('^AppleDisplay.*USEABLE', output, re.MULTILINE)
+        if not m:
+            # Display is turned off or asleep
+            return True
+
+        # If the Display ID has changed, then we've fast-switched to another
+        # user, and so it's the same thing as being asleep.
+        return asleep_mac.display_id != CGMainDisplayID()
+    except Exception as e:
+        if not asleep_mac.once:
+            print "Warning: pmset not installed and/or broken"
+            # Display the warning only once
+            asleep_mac.once = True
+
+        return False
 
 def asleep_linux():
     global options
 
-    import subprocess
+    # A hackish way to create a static local variable in Python
+    if not hasattr(asleep_linux, "once"):
+        asleep_linux.once = False
 
     try:
         output = subprocess.check_output(['xprintidle'])
@@ -135,6 +146,11 @@ def asleep_linux():
         # If the
         return idle_ms > (options.wait * 60 * 1000)
     except:
+        if not asleep_linux.once:
+            print "Warning: xprintidle not installed and/or broken"
+            # Display the warning only once
+            asleep_linux.once = True
+
         return False
 
 def asleep():
@@ -169,7 +185,10 @@ if not options.password:
     if not options.password:
         sys.exit(0)
 
-your_queue_list = get_list(your_queue_url, "Youe Queue")
+# Test if asleep() works before we start
+asleep()
+
+your_queue_list = get_list(your_queue_url, "Your Queue")
 vine_for_all_list = get_list(vine_for_all_url, "Vine For All")
 
 while True:
@@ -178,7 +197,7 @@ while True:
     if asleep():
         continue
 
-    your_queue_list2 = get_list(your_queue_url, "Youe Queue")
+    your_queue_list2 = get_list(your_queue_url, "Your Queue")
     for link in your_queue_list2:
         if link not in your_queue_list:
             print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), 'New item:', link
