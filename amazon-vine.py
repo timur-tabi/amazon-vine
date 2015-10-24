@@ -20,14 +20,29 @@ import os
 import re
 import time
 import urllib2
-from bs4 import BeautifulSoup
-import mechanize
 import webbrowser
 import datetime
 import subprocess
 
 import getpass
 from optparse import OptionParser
+
+# Try to import packages that the user might not have
+try:
+    from bs4 import BeautifulSoup
+except Exception as e:
+    print "Please install the bs4 (BeautifulSoup 4.x) package from"
+    print "http://www.crummy.com/software/BeautifulSoup/"
+    print e
+    sys.exit(1)
+
+try:
+    import mechanize
+except Exception as e:
+    print "Please install the mechanize package from"
+    print "https://pypi.python.org/pypi/mechanize/"
+    print e
+    sys.exit(1)
 
 your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
