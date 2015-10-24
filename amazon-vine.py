@@ -202,6 +202,7 @@ while True:
         if link not in your_queue_list:
             print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), 'New item:', link
             webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_Default' % link)
+            time.sleep(1)
 
     # If there are no items, then assume that it's a glitch.  Otherwise, the
     # next pass will think that all items are new and will open a bunch of
@@ -214,6 +215,7 @@ while True:
         if link not in vine_for_all_list:
             print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), 'New item:', link
             webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_LastChance' % link)
+            time.sleep(1)
 
     # If there are no items, then assume that it's a glitch.  Otherwise, the
     # next pass will think that all items are new and will open a bunch of
