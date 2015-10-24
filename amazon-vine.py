@@ -44,18 +44,31 @@ except Exception as e:
     print e
     sys.exit(1)
 
+try:
+    import fake_useragent
+except Exception as e:
+    print "Please install the fake_useragent package from"
+    print "https://pypi.python.org/pypi/fake-useragent"
+    print e
+    sys.exit(1)
+
+# Initialize the fake_useragent module.  This will take a minute
+print "Initializing fake_useragent"
+ua = fake_useragent.UserAgent(cache=False)
+
 your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
 
 def get_list(url, name):
     global options
+    global ua
 
     while True:
         br = mechanize.Browser()
 
         # Necessary for Amazon.com
         br.set_handle_robots(False)
-        br.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13')]
+        br.addheaders = [('User-agent', ua.random)]
 
         try:
             print 'Opening %s website' % name
