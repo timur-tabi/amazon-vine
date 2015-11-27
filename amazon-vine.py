@@ -59,44 +59,74 @@ ua = fake_useragent.UserAgent(cache=False)
 your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
 
+def download_vine_page(url, name = None):
+    global options
+    global ua
+
+    br = mechanize.Browser()
+
+    # Necessary for Amazon.com
+    br.set_handle_robots(False)
+    br.addheaders = [('User-agent', ua.random)]
+
+    try:
+        if name:
+            print 'Opening %s website' % name
+        br.open(url)
+    except urllib2.HTTPError as e:
+        if name:
+            print e
+        return None
+    except urllib2.URLError as e:
+        if name:
+            print 'URL Error', e
+        return None
+    except Exception as e:
+        print 'General Error', e
+        return None
+
+    try:
+        if name:
+            print 'Logging in'
+        # Select the sign-in form
+        # Fixme: we probably don't handle bad userid/password properly
+        br.select_form(name='signIn')
+        br['email'] = options.email
+        br['password'] = options.password
+        response = br.submit()
+    except urllib2.HTTPError as e:
+        if name:
+            print e
+            print url
+        return None
+    except urllib2.URLError as e:
+        if name:
+            print 'URL Error', e
+            print url
+        return None
+    except Exception as e:
+        if name:
+            print 'General Error', e
+            print url
+            print br
+            print br.forms()
+        return None
+
+    if name:
+        print 'Reading response'
+    html = response.read()
+    br.close()
+    if name:
+        print 'Parsing response'
+    return BeautifulSoup(html)
+
 def get_list(url, name):
     global options
     global ua
 
-    while True:
-        br = mechanize.Browser()
-
-        # Necessary for Amazon.com
-        br.set_handle_robots(False)
-        br.addheaders = [('User-agent', ua.random)]
-
-        try:
-            print 'Opening %s website' % name
-            br.open(url)
-
-            print 'Logging in'
-            # Select the sign-in form
-            br.select_form(name='signIn')
-            br['email'] = options.email
-            br['password'] = options.password
-            response = br.submit()
-
-            break
-        except urllib2.HTTPError as e:
-            print e
-        except urllib2.URLError as e:
-            print 'URL Error', e
-        except Exception as e:
-            print 'General Error', e
-            print br
-            print br.forms()
-            sys.exit(1)
-
-    print 'Reading response'
-    html = response.read()
-    br.close()
-    print 'Parsing response'
-    soup = BeautifulSoup(html)
+    soup = download_vine_page(url, name)
+    if not soup:
+        return None
 
     asins = set()
     for link in soup.find_all('tr', {'class':'v_newsletter_item'}):
@@ -104,13 +134,15 @@ def get_list(url, name):
             print 'Duplicate in-stock item:', link['id']
         asins.add(link['id'])
 
+    # Fixme: asins can be blank if Amazon asks us to verify our login
     if len(asins) == 0:
         print datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         with open('debug.html', 'w') as f:
-            print >>f, html
+            print >>f, soup
         with open('debug.txt', 'w') as f:
             for link in soup.find_all('tr', {'class':'v_newsletter_item'}):
                 print >>f, link
+        return None
 
     # Find list of out-of-stock items.  All of items listed in the
     # 'vineInitalJson' variable are out of stock.  Also, Amazon's web
@@ -190,6 +222,19 @@ def asleep():
 
     return False
 
+def open_vine_page(link, url):
+    print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+    soup = download_vine_page(url % link)
+    # Make sure we don't get a 404 or some other error
+    if soup:
+        print 'New item:', link
+        webbrowser.open_new_tab(url % link)
+        time.sleep(1)
+        return True
+    else:
+        print 'Invalid item:', link
+        return False
+
 parser = OptionParser(usage="usage: %prog [options]")
 parser.add_option("-e", dest="email",
     help="Amazon.com email address (default is AMAZON_EMAIL environment variable)",
@@ -217,7 +262,12 @@ if not options.password:
 asleep()
 
 your_queue_list = get_list(your_queue_url, "Your Queue")
+
 vine_for_all_list = get_list(vine_for_all_url, "Vine For All")
+if not your_queue_list:
+    # There's always a bunch of vine-for-all items.
+    print 'Cannot get list of items'
+    sys.exit(1)
 
 while True:
     print 'Waiting %u minute%s' % (options.wait, 's'[options.wait == 1:])
@@ -226,27 +276,31 @@ while True:
         continue
 
     your_queue_list2 = get_list(your_queue_url, "Your Queue")
-    for link in your_queue_list2:
-        if link not in your_queue_list:
-            print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), 'New item:', link
-            webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_Default' % link)
-            time.sleep(1)
-
-    # If there are no items, then assume that it's a glitch.  Otherwise, the
-    # next pass will think that all items are new and will open a bunch of
-    # browser windows.
     if your_queue_list2:
+        for link in your_queue_list2.copy():
+            if link not in your_queue_list:
+                if not open_vine_page(link, 'https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_Default'):
+                    # If the item can't be opened, it might be because the web site
+                    # isn't ready to show it to me yet.  Remove it from our list so
+                    # that it appears again as a new item, and we'll try again.
+                    your_queue_list2.remove(link)
+
+        # If there are no items, then assume that it's a glitch.  Otherwise, the
+        # next pass will think that all items are new and will open a bunch of
+        # browser windows.
         your_queue_list = your_queue_list2
 
     vine_for_all_list2 = get_list(vine_for_all_url, "Vine For All")
-    for link in vine_for_all_list2:
-        if link not in vine_for_all_list:
-            print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), 'New item:', link
-            webbrowser.open_new_tab('https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_LastChance' % link)
-            time.sleep(1)
-
-    # If there are no items, then assume that it's a glitch.  Otherwise, the
-    # next pass will think that all items are new and will open a bunch of
-    # browser windows.
     if vine_for_all_list2:
+        for link in vine_for_all_list2.copy():
+            if link not in vine_for_all_list:
+                if not open_vine_page(link, 'https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_LastChance'):
+                    # If the item can't be opened, it might be because the web site
+                    # isn't ready to show it to me yet.  Remove it from our list so
+                    # that it appears again as a new item, and we'll try again.
+                    vine_for_all_list2.remove(link)
+
+        # If there are no items, then assume that it's a glitch.  Otherwise, the
+        # next pass will think that all items are new and will open a bunch of
+        # browser windows.
         vine_for_all_list = vine_for_all_list2
