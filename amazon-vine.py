@@ -228,7 +228,8 @@ def asleep_linux():
         output = subprocess.check_output(['xprintidle'])
         idle_ms = int(output)
 
-        # If the
+        # Check if the system has been idle longer than we normally wait
+        # between passes.
         return idle_ms > (options.wait * 60 * 1000)
     except:
         if not asleep_linux.once:
@@ -239,6 +240,12 @@ def asleep_linux():
         return False
 
 def asleep():
+    global options
+
+    # -w0 should only be used for testing
+    if options.wait == 0:
+        return False
+
     if sys.platform == "darwin":
         return asleep_mac()
 
