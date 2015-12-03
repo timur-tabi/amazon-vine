@@ -63,63 +63,74 @@ def login():
     global options
     global ua
 
-    while True:
-        br = mechanize.Browser()
+    br = mechanize.Browser(factory = mechanize.RobustFactory())
 
-        # Necessary for Amazon.com
-        br.set_handle_robots(False)
-        br.addheaders = [('User-agent', ua.random)]
+    # Necessary for Amazon.com
+    br.set_handle_robots(False)
+    br.addheaders = [('User-agent', ua.random)]
 
-        try:
-            print 'Logging into Amazon.com'
-            br.open('https://www.amazon.com/gp/vine')
+    try:
+        print 'Logging into Amazon.com'
+        br.open('https://www.amazon.com/gp/vine')
 
-            # Select the sign-in form
-            # Fixme: we don't handle bad userid/password properly
+        # Select the sign-in form
+        br.select_form(name='signIn')
+        br['email'] = options.email
+        br['password'] = options.password
+        response = br.submit()
+
+         # Make sure we actually logged in
+        html = response.read()
+
+        # Check for bad password
+        # Fixme: not robust
+        if 'There was an error with your E-Mail/ Password combination' in html:
+            print 'Invalid userid or password'
+            sys.exit(1)
+
+        with open('response.html', 'w') as f:
+            print >>f, html
+        soup = BeautifulSoup(html)
+
+        # Check for image captcha
+        captcha = soup.find('img',{'id':'auth-captcha-image'})
+        if captcha:
+            print "Login captcha detected, saved to captcha.jpg"
+            response = br.retrieve(captcha['src'], 'captcha.jpg')
+            # Fixme: use Python image library if available
+            webbrowser.open_new('file://' + os.path.realpath('captcha.jpg'))
+            value = raw_input('What word is in the image? ')
             br.select_form(name='signIn')
             br['email'] = options.email
             br['password'] = options.password
+            br['guess'] = value
             response = br.submit()
+            # Fixme: we should verify that the login actually went through
 
-             # Make sure we actually logged in
-            while True:
-                html = response.read()
+        # Check for account verification
+        # Fixme: this is untested.
+        verify = soup.find('div', {'id':'dcq_question_1'})
+        if verify:
+            br.select_form(name='ap_dcq_form')
+            text = verify.find('label')
+            # Get the text of the 'label' tag, and remove all extra spaces
+            prompt = ' '.join(text.get_text().split())
+            # The prompt starts with '1. ', so remove that and
+            # add an extra space after the ?
+            prompt = prompt[3:] + ' '
+            br['dcq_question_subjective_1'] = raw_input(prompt)
+            br.submit()
+            # Fixme: we should verify that the login actually went through
 
-                # Check for bad password
-                # Fixme: not robust
-                if 'There was an error with your E-Mail/ Password combination' in html:
-                    print 'Invalid userid or password'
-                    sys.exit(1)
+        return br
+    except urllib2.HTTPError as e:
+        print e
+    except urllib2.URLError as e:
+        print 'URL Error', e
+    except Exception as e:
+        print 'General Error', e
 
-                with open('response.html', 'w') as f:
-                    print >>f, html
-                soup = BeautifulSoup(html)
-
-                # Check for image captcha
-                captcha = soup.find('img',{'id':'auth-captcha-image'})
-                if captcha:
-                    print "Login captcha detected, saved to captcha.jpg"
-                    response = br.retrieve(captcha['src'], 'captcha.jpg')
-                    # Fixme: use Python image library if available
-                    webbrowser.open_new('file://' + os.path.realpath('captcha.jpg'))
-                    value = raw_input('What number is in the image? ')
-                    br.select_form(name='signIn')
-                    br['email'] = options.email
-                    br['password'] = options.password
-                    br['guess'] = value
-                    response = br.submit()
-                    continue
-                break
-            return br
-        except urllib2.HTTPError as e:
-            print e
-            continue
-        except urllib2.URLError as e:
-            print 'URL Error', e
-            continue
-        except Exception as e:
-            print 'General Error', e
-            continue
+    sys.exit(1)
 
 def download_vine_page(br, url, name = None):
     if name:
