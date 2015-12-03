@@ -59,72 +59,85 @@ ua = fake_useragent.UserAgent(cache=False)
 your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
 
-def download_vine_page(url, name = None):
+def login():
     global options
     global ua
 
-    br = mechanize.Browser()
+    while True:
+        br = mechanize.Browser()
 
-    # Necessary for Amazon.com
-    br.set_handle_robots(False)
-    br.addheaders = [('User-agent', ua.random)]
+        # Necessary for Amazon.com
+        br.set_handle_robots(False)
+        br.addheaders = [('User-agent', ua.random)]
 
-    try:
-        if name:
-            print 'Opening %s website' % name
-        br.open(url)
-    except urllib2.HTTPError as e:
-        if name:
+        try:
+            print 'Logging into Amazon.com'
+            br.open('https://www.amazon.com/gp/vine')
+
+            # Select the sign-in form
+            # Fixme: we don't handle bad userid/password properly
+            br.select_form(name='signIn')
+            br['email'] = options.email
+            br['password'] = options.password
+            response = br.submit()
+
+             # Make sure we actually logged in
+            while True:
+                html = response.read()
+
+                # Check for bad password
+                # Fixme: not robust
+                if 'There was an error with your E-Mail/ Password combination' in html:
+                    print 'Invalid userid or password'
+                    sys.exit(1)
+
+                with open('response.html', 'w') as f:
+                    print >>f, html
+                soup = BeautifulSoup(html)
+
+                # Check for image captcha
+                captcha = soup.find('img',{'id':'auth-captcha-image'})
+                if captcha:
+                    print "Login captcha detected, saved to captcha.jpg"
+                    response = br.retrieve(captcha['src'], 'captcha.jpg')
+                    # Fixme: use Python image library if available
+                    webbrowser.open_new('file://' + os.path.realpath('captcha.jpg'))
+                    value = raw_input('What number is in the image? ')
+                    br.select_form(name='signIn')
+                    br['email'] = options.email
+                    br['password'] = options.password
+                    br['guess'] = value
+                    response = br.submit()
+                    continue
+                break
+            return br
+        except urllib2.HTTPError as e:
             print e
-        return None
-    except urllib2.URLError as e:
-        if name:
+            continue
+        except urllib2.URLError as e:
             print 'URL Error', e
-        return None
-    except Exception as e:
-        print 'General Error', e
-        return None
-
-    try:
-        if name:
-            print 'Logging in'
-        # Select the sign-in form
-        # Fixme: we probably don't handle bad userid/password properly
-        br.select_form(name='signIn')
-        br['email'] = options.email
-        br['password'] = options.password
-        response = br.submit()
-    except urllib2.HTTPError as e:
-        if name:
-            print e
-            print url
-        return None
-    except urllib2.URLError as e:
-        if name:
-            print 'URL Error', e
-            print url
-        return None
-    except Exception as e:
-        if name:
+            continue
+        except Exception as e:
             print 'General Error', e
-            print url
-            print br
-            print br.forms()
-        return None
+            continue
+
+def download_vine_page(br, url, name = None):
+    if name:
+        print 'Opening %s website' % name
+    response = br.open(url)
 
     if name:
         print 'Reading response'
     html = response.read()
-    br.close()
     if name:
         print 'Parsing response'
     return BeautifulSoup(html)
 
-def get_list(url, name):
+def get_list(br, url, name):
     global options
     global ua
 
-    soup = download_vine_page(url, name)
+    soup = download_vine_page(br, url, name)
     if not soup:
         return None
 
@@ -136,12 +149,13 @@ def get_list(url, name):
 
     # Fixme: asins can be blank if Amazon asks us to verify our login
     if len(asins) == 0:
-        print datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        print "No items found, saving debug output"
         with open('debug.html', 'w') as f:
             print >>f, soup
         with open('debug.txt', 'w') as f:
             for link in soup.find_all('tr', {'class':'v_newsletter_item'}):
                 print >>f, link
+        sys.exit(0)
         return None
 
     # Find list of out-of-stock items.  All of items listed in the
@@ -222,9 +236,9 @@ def asleep():
 
     return False
 
-def open_vine_page(link, url):
+def open_vine_page(br, link, url):
     print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-    soup = download_vine_page(url % link)
+    soup = download_vine_page(br, url % link)
     # Make sure we don't get a 404 or some other error
     if soup:
         print 'New item:', link
@@ -261,13 +275,20 @@ if not options.password:
 # Test if asleep() works before we start
 asleep()
 
-your_queue_list = get_list(your_queue_url, "Your Queue")
+br = login()
+if not br:
+    print "Could not log in"
+    sys.exit(1)
 
-vine_for_all_list = get_list(vine_for_all_url, "Vine For All")
+your_queue_list = get_list(br, your_queue_url, "Your Queue")
+
+vine_for_all_list = get_list(br, vine_for_all_url, "Vine For All")
 if not your_queue_list:
     # There's always a bunch of vine-for-all items.
     print 'Cannot get list of items'
     sys.exit(1)
+
+br.close()
 
 while True:
     print 'Waiting %u minute%s' % (options.wait, 's'[options.wait == 1:])
@@ -275,11 +296,12 @@ while True:
     if asleep():
         continue
 
-    your_queue_list2 = get_list(your_queue_url, "Your Queue")
+    br = login()
+    your_queue_list2 = get_list(br, your_queue_url, "Your Queue")
     if your_queue_list2:
         for link in your_queue_list2.copy():
             if link not in your_queue_list:
-                if not open_vine_page(link, 'https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_Default'):
+                if not open_vine_page(br, link, 'https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_Default'):
                     # If the item can't be opened, it might be because the web site
                     # isn't ready to show it to me yet.  Remove it from our list so
                     # that it appears again as a new item, and we'll try again.
@@ -290,11 +312,11 @@ while True:
         # browser windows.
         your_queue_list = your_queue_list2
 
-    vine_for_all_list2 = get_list(vine_for_all_url, "Vine For All")
+    vine_for_all_list2 = get_list(br, vine_for_all_url, "Vine For All")
     if vine_for_all_list2:
         for link in vine_for_all_list2.copy():
             if link not in vine_for_all_list:
-                if not open_vine_page(link, 'https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_LastChance'):
+                if not open_vine_page(br, link, 'https://www.amazon.com/gp/vine/product?ie=UTF8&asin=%s&tab=US_LastChance'):
                     # If the item can't be opened, it might be because the web site
                     # isn't ready to show it to me yet.  Remove it from our list so
                     # that it appears again as a new item, and we'll try again.
@@ -304,3 +326,5 @@ while True:
         # next pass will think that all items are new and will open a bunch of
         # browser windows.
         vine_for_all_list = vine_for_all_list2
+
+    br.close()
