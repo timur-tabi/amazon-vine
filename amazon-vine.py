@@ -301,7 +301,7 @@ if not br:
 your_queue_list = get_list(br, your_queue_url, "Your Queue")
 
 vine_for_all_list = get_list(br, vine_for_all_url, "Vine For All")
-if not your_queue_list:
+if not vine_for_all_list:
     # There's always a bunch of vine-for-all items.
     print 'Cannot get list of items'
     sys.exit(1)
