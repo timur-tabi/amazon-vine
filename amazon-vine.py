@@ -158,17 +158,6 @@ def get_list(br, url, name):
             print 'Duplicate in-stock item:', link['id']
         asins.add(link['id'])
 
-    # Fixme: asins can be blank if Amazon asks us to verify our login
-    if len(asins) == 0:
-        print "No items found, saving debug output"
-        with open('debug.html', 'w') as f:
-            print >>f, soup
-        with open('debug.txt', 'w') as f:
-            for link in soup.find_all('tr', {'class':'v_newsletter_item'}):
-                print >>f, link
-        sys.exit(0)
-        return None
-
     # Find list of out-of-stock items.  All of items listed in the
     # 'vineInitalJson' variable are out of stock.  Also, Amazon's web
     # developers don't know how to spell.  "Inital"?  Seriously?
