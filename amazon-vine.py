@@ -95,10 +95,10 @@ def login():
         # Check for image captcha
         captcha = soup.find('img',{'id':'auth-captcha-image'})
         if captcha:
-            print "Login captcha detected, saved to captcha.jpg"
-            response = br.retrieve(captcha['src'], 'captcha.jpg')
+            response = br.retrieve(captcha['src'])
+            print 'Login captcha detected, saved to', response[0]
             # Fixme: use Python image library if available
-            webbrowser.open_new('file://' + os.path.realpath('captcha.jpg'))
+            webbrowser.open_new('file://' + os.path.realpath(response[0]))
             value = raw_input('What word is in the image? ')
             br.select_form(name='signIn')
             br['email'] = options.email
