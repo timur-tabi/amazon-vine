@@ -59,6 +59,19 @@ ua = fake_useragent.UserAgent(cache=False)
 your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
 
+# Show an image on the screen.  If the Python Image Library is available,
+# then use it.  Otherwise, open a web browser window.  I'm not sure if
+# this is useful, since on my system, webbrowser.open() uses the Image
+# Viewer anyway.
+def show_captcha(filename):
+    try:
+        import Image
+        image = Image.open(filename)
+        image.show()
+    except Exception as e:
+        # No image library, use existing webbrowser
+        webbrowser.open_new('file://' + filename)
+
 def login():
     global options
     global ua
@@ -93,12 +106,12 @@ def login():
         soup = BeautifulSoup(html)
 
         # Check for image captcha
+        # Fixme: if the user waits too long to responde, the script terminates
         captcha = soup.find('img',{'id':'auth-captcha-image'})
         if captcha:
             response = br.retrieve(captcha['src'])
             print 'Login captcha detected, saved to', response[0]
-            # Fixme: use Python image library if available
-            webbrowser.open_new('file://' + os.path.realpath(response[0]))
+            show_captcha(os.path.realpath(response[0]))
             value = raw_input('What word is in the image? ')
             br.select_form(name='signIn')
             br['email'] = options.email
