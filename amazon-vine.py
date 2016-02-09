@@ -82,7 +82,7 @@ def solve_captcha(filename):
 
     if use_deathbycaptcha:
         try:
-            dbc = deathbycaptcha.SocketClient(options.dbcu, options.dbcp)
+            dbc = deathbycaptcha.HttpClient(options.dbcu, options.dbcp)
             captcha = dbc.decode(filename, 60)
             if captcha:
                 print 'Death By Captcha returns %s' % captcha['text']
@@ -336,7 +336,7 @@ ua = fake_useragent.UserAgent(cache=False)
 # Test for Death By Captcha
 try:
     import deathbycaptcha
-    dbc = deathbycaptcha.SocketClient(options.dbcu, options.dbcp)
+    dbc = deathbycaptcha.HttpClient(options.dbcu, options.dbcp)
     if not dbc:
         print 'Death By Captcha login failed'
     else:
