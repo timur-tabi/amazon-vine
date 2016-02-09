@@ -85,16 +85,20 @@ def solve_captcha(filename):
             dbc = deathbycaptcha.HttpClient(options.dbcu, options.dbcp)
             captcha = dbc.decode(filename, 60)
             if captcha:
-                print 'Death By Captcha returns %s' % captcha['text']
+                # Sometimes the image shows blank spaces, and the text includes
+                # those spaces, but Amazon doesn't like them.
+                text = captcha['text'].encode('ascii','ignore')
+                text = text.translate(None, ' ')
+                print 'Death By Captcha returns', text
                 try:
                     # It's not important if we can't get the balance
                     print 'Death By Captcha balance: %.3f cents' % dbc.get_balance()
                 except Exception:
                     pass
-                return captcha['text']
+                return text
             else:
                 print 'Death By Captcha could not solve captcha'
-        except Exception:
+        except Exception as e:
             print e  # For debugging
             pass
 
