@@ -180,7 +180,10 @@ def login():
 def download_vine_page(br, url, name = None):
     if name:
         print 'Opening %s website' % name
-    response = br.open(url)
+    try:
+        response = br.open(url)
+    except:
+        return None
 
     if name:
         print 'Reading response'
