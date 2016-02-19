@@ -46,6 +46,12 @@ except Exception as e:
 
 try:
     import fake_useragent
+    print "Initializing fake_useragent"
+    ua = fake_useragent.UserAgent(cache=False)
+    # We want to use the same user agent every time.  Apparently, Amazon gets
+    # less suspicious if we do.
+    useragent = ua.ff;
+
 except Exception as e:
     print "Please install the fake_useragent package from"
     print "https://pypi.python.org/pypi/fake-useragent"
@@ -107,13 +113,13 @@ def solve_captcha(filename):
 
 def login():
     global options
-    global ua
+    global useragent
 
     br = mechanize.Browser(factory = mechanize.RobustFactory())
 
     # Necessary for Amazon.com
     br.set_handle_robots(False)
-    br.addheaders = [('User-agent', ua.random)]
+    br.addheaders = [('User-agent', useragent)]
 
     try:
         print 'Logging into Amazon.com'
@@ -194,7 +200,6 @@ def download_vine_page(br, url, name = None):
 
 def get_list(br, url, name):
     global options
-    global ua
 
     soup = download_vine_page(br, url, name)
     if not soup:
@@ -335,10 +340,6 @@ if not options.password:
 
 # Test if asleep() works before we start
 asleep()
-
-# Initialize the fake_useragent module.  This will take a minute
-print "Initializing fake_useragent"
-ua = fake_useragent.UserAgent(cache=False)
 
 # Test for Death By Captcha
 try:
