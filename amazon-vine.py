@@ -297,17 +297,53 @@ def asleep():
     return False
 
 def open_vine_page(br, link, url):
+    global options
+    global tax
+
     print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
     soup = download_vine_page(br, url % link)
     # Make sure we don't get a 404 or some other error
     if soup:
         print 'New item:', link
+        # Display how much tax it costs
+        tags = soup.find_all('p', text=re.compile('Estimated tax value : \$[0-9\.]*'))
+        if tags:
+            tag = tags[0].contents[0]
+            m = re.search('\$([0-9\.]*)', tag)
+            if m:
+                cost = float(m.group(1))
+                print 'Tax cost: $%.2f' % cost
+                # We only care about the cost if we're under the $600 limit.
+                # If we're already over it, then show everything.
+                if options.tax and tax < 500.0:
+                    # If it's too expensive, then don't bother showing it
+                    if cost >= (600.0 - tax):
+                        print 'Too expensive'
+                        return True
         webbrowser.open_new_tab(url % link)
         time.sleep(1)
         return True
     else:
         print 'Invalid item:', link
         return False
+
+def update_tax_estimate(br):
+    global tax
+
+    soup = download_vine_page(br, 'https://www.amazon.com/gp/vine/account')
+    if soup:
+        year = datetime.datetime.today().year
+        # A tax year starts from July 1 the previous year to June 30 of this year
+        if (datetime.datetime.today().month > 6):
+            year = year + 1
+        tags = soup.find_all('li', text=re.compile('Estimated %4u: \$[0-9\.]*' % year))
+        if tags:
+            # Find the tax estimate for "this" year
+            tag = tags[0].contents[0]
+            m = re.search('\$([0-9\.]*)', tag)
+            if m:
+                tax = float(m.group(1))
+                print 'Current %4u tax estimate: $%.2f' % (year, tax)
 
 parser = OptionParser(usage="usage: %prog [options]")
 parser.add_option("-e", dest="email",
@@ -325,6 +361,9 @@ parser.add_option("--dbcu", dest="dbcu",
 parser.add_option("--dbcp", dest="dbcp",
     help="Death By Captcha password (default is DEATHBYCAPTCHA_PASSWORD environment variable)",
     type="string", default=os.getenv('DEATHBYCAPTCHA_PASSWORD'))
+parser.add_option("-t", dest="tax",
+    help="Ignore items that would cause tax liability to exceed $600",
+    action="store_true")
 
 (options, args) = parser.parse_args()
 
@@ -376,6 +415,7 @@ while True:
         continue
 
     br = login()
+    update_tax_estimate(br)
     your_queue_list2 = get_list(br, your_queue_url, "Your Queue")
     if your_queue_list2:
         for link in your_queue_list2.copy():
