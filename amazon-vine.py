@@ -136,7 +136,7 @@ def login():
 
         # Check for bad password
         # Fixme: not robust
-        if 'There was an error with your E-Mail/ Password combination' in html:
+        if 'Your email or password was incorrect. Please try again.' in html:
             print 'Invalid userid or password'
             sys.exit(1)
 
