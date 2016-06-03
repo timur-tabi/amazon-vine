@@ -125,6 +125,9 @@ def login():
         print 'Logging into Amazon.com'
         br.open('https://www.amazon.com/gp/vine')
 
+        with open('login_form.html', 'w') as f:
+            print >>f, br.response().read()
+
         # Select the sign-in form
         br.select_form(name='signIn')
         br['email'] = options.email
@@ -138,10 +141,10 @@ def login():
         # Fixme: not robust
         if 'Your email or password was incorrect. Please try again.' in html:
             print 'Invalid userid or password'
+            with open('login_response.html', 'w') as f:
+                print >>f, html
             sys.exit(1)
 
-        with open('response.html', 'w') as f:
-            print >>f, html
         soup = BeautifulSoup(html)
 
         # Check for image captcha
