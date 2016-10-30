@@ -141,8 +141,16 @@ def login():
 
         # Check for bad password
         # Fixme: not robust
-        if 'Your email or password was incorrect. Please try again.' in html:
+        if 'Your email or password was incorrect' in html:
             print 'Invalid userid or password'
+            sys.exit(1)
+
+        if 'Enter a valid email or mobile number' in html:
+            print 'Unable to log in (invalid email)'
+            sys.exit(1)
+
+        if 'Please Enable Cookies to Continue' in html:
+            print 'Unable to log in (cookies disabled)'
             sys.exit(1)
 
         soup = BeautifulSoup(html)
