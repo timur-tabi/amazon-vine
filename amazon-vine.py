@@ -136,13 +136,13 @@ def login():
 
          # Make sure we actually logged in
         html = response.read()
+        with open('login_response.html', 'w') as f:
+            print >>f, html
 
         # Check for bad password
         # Fixme: not robust
         if 'Your email or password was incorrect. Please try again.' in html:
             print 'Invalid userid or password'
-            with open('login_response.html', 'w') as f:
-                print >>f, html
             sys.exit(1)
 
         soup = BeautifulSoup(html)
