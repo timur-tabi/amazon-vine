@@ -23,6 +23,7 @@ import urllib2
 import webbrowser
 import datetime
 import subprocess
+import cookielib
 
 import getpass
 from optparse import OptionParser
@@ -55,6 +56,14 @@ try:
 except Exception as e:
     print "Please install the fake_useragent package from"
     print "https://pypi.python.org/pypi/fake-useragent"
+    print e
+    sys.exit(1)
+
+try:
+    import browsercookie
+except Exception as e:
+    print "Please install the browsercookie package from"
+    print "https://pypi.python.org/pypi/browsercookie/"
     print e
     sys.exit(1)
 
@@ -116,6 +125,24 @@ def login():
     global useragent
 
     br = mechanize.Browser(factory = mechanize.RobustFactory())
+
+    # Load cookies from the selected web browser
+    cj2 = getattr(browsercookie, options.browser)()
+
+    # Create a new cookie jar to hold the cookies we want
+    cj = cookielib.CookieJar()
+
+    # We only want cookies for Amazon
+    for cookie in cj2:
+        if cookie.domain == '.amazon.com':
+            cj.set_cookie(cookie)
+
+    if not cj:
+        print 'No Amazon session data found in browser "%s"' % options.browser
+        sys.exit(1)
+
+    # Load those cookies into mechanize for the session
+    br.set_cookiejar(cj)
 
     # Necessary for Amazon.com
     br.set_handle_robots(False)
@@ -375,6 +402,9 @@ parser.add_option("--dbcp", dest="dbcp",
 parser.add_option("-t", dest="tax",
     help="Ignore items that would cause tax liability to exceed $600",
     action="store_true")
+parser.add_option('--browser', dest='browser',
+    help='Which browser to use ("firefox" or "chrome") from which to load the session cookies (default is "%default")',
+    type="string", default='firefox')
 
 (options, args) = parser.parse_args()
 

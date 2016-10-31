@@ -11,6 +11,26 @@ Amazon Vine is an invitation-only program, and there nothing you can do
 to get an invitation, not even from other Vine members.  I have no idea
 why I was invited.
 
+IMPORTANT: Log in via a web browser first
+-----------------------------------------
+
+This script can no longer log into Amazon.com by itself.  It needs the
+help of your web browser.  Specifically, it uses the 'browsercookie'
+package to copy the session cookies from your web browser during the
+login process.  See the browsercookie web page for a list of browsers
+that are supported: https://pypi.python.org/pypi/browsercookie/
+
+Here are the steps:
+
+    1) Load the browser
+    2) Make sure cookies are fully enabled.
+    3) Log into Amazon.
+    4) Quit the browser (this will ensure the cookies are saved to disk)
+    5) Launch the script.  Specify the --browser option if you used Chrome
+
+The script will then load the cookies from your browser's cookie file,
+and then use those cookies to log into Amazon.com.
+
 Death By Captcha support
 ------------------------
 
