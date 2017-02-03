@@ -29,43 +29,50 @@ import getpass
 from optparse import OptionParser
 
 # Try to import packages that the user might not have
-try:
-    from bs4 import BeautifulSoup
-except Exception as e:
-    print "Please install the bs4 (BeautifulSoup 4.x) package from"
-    print "http://www.crummy.com/software/BeautifulSoup/"
-    print e
-    sys.exit(1)
+def import_packages():
+    try:
+        global bs4
+        import bs4
+        print 'Using BeautifulSoup version', bs4.__version__
+    except Exception as e:
+        print "Please install or update the bs4 (BeautifulSoup 4.x) package from"
+        print "http://www.crummy.com/software/BeautifulSoup/"
+        print e
+        raise
 
-try:
-    import mechanize
-except Exception as e:
-    print "Please install the mechanize package from"
-    print "https://pypi.python.org/pypi/mechanize/"
-    print e
-    sys.exit(1)
+    try:
+        global mechanize
+        import mechanize
+        print 'Using mechanize version %u.%u.%u' % mechanize.__version__[0:3]
+    except Exception as e:
+        print "Please install or update the mechanize package from"
+        print "https://pypi.python.org/pypi/mechanize/"
+        print e
+        raise
 
-try:
-    import fake_useragent
-    print "Initializing fake_useragent"
-    ua = fake_useragent.UserAgent(cache=False)
-    # We want to use the same user agent every time.  Apparently, Amazon gets
-    # less suspicious if we do.
-    useragent = ua.ff;
+    try:
+        global fake_useragent
+        global useragent
+        import fake_useragent
+        ua = fake_useragent.UserAgent(cache=False)
+        # We want to use the same user agent every time.  Apparently, Amazon gets
+        # less suspicious if we do.
+        useragent = ua.ff;
+        print 'Using fake_useragent version', fake_useragent.VERSION
+    except Exception as e:
+        print "Please install or update the fake_useragent package from"
+        print "https://pypi.python.org/pypi/fake-useragent"
+        print e
+        raise
 
-except Exception as e:
-    print "Please install the fake_useragent package from"
-    print "https://pypi.python.org/pypi/fake-useragent"
-    print e
-    sys.exit(1)
-
-try:
-    import browsercookie
-except Exception as e:
-    print "Please install the browsercookie package from"
-    print "https://pypi.python.org/pypi/browsercookie/"
-    print e
-    sys.exit(1)
+    try:
+        global browsercookie
+        import browsercookie
+    except Exception as e:
+        print "Please install or update the browsercookie package from"
+        print "https://pypi.python.org/pypi/browsercookie/"
+        print e
+        raise
 
 your_queue_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_Default'
 vine_for_all_url = 'https://www.amazon.com/gp/vine/newsletter?ie=UTF8&tab=US_LastChance'
@@ -180,7 +187,7 @@ def login():
             print 'Unable to log in (cookies disabled)'
             sys.exit(1)
 
-        soup = BeautifulSoup(html)
+        soup = bs4.BeautifulSoup(html)
 
         # Check for image captcha
         # Fixme: if the user waits too long to responde, the script terminates
@@ -234,7 +241,7 @@ def download_vine_page(br, url, name = None):
     html = response.read()
     if name:
         print 'Parsing response'
-    return BeautifulSoup(html)
+    return bs4.BeautifulSoup(html)
 
 def get_list(br, url, name):
     global options
@@ -417,6 +424,11 @@ if not options.password:
     options.password = getpass.getpass('Amazon.com password: ')
     if not options.password:
         sys.exit(0)
+
+try:
+    import_packages()
+except:
+    sys.exit(1)
 
 # Test if asleep() works before we start
 asleep()
