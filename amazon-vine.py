@@ -157,10 +157,15 @@ def login():
 
     try:
         print 'Logging into Amazon.com'
-        br.open('https://www.amazon.com/gp/vine')
+        r = br.open('https://www.amazon.com/gp/vine')
 
+        html = r.read()
         with open('login_form.html', 'w') as f:
-            print >>f, br.response().read()
+            print >>f, html
+
+        # Are we already logged in?
+        if 'The Exclusive Club of Influential Amazon Voices.' in html:
+            return br
 
         # Select the sign-in form
         br.select_form(name='signIn')
