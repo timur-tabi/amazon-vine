@@ -348,7 +348,7 @@ def asleep():
 
 def open_vine_page(br, link, url):
     global options
-    global tax
+    global current_tax_total
 
     print datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
     soup = download_vine_page(br, url % link)
@@ -365,9 +365,9 @@ def open_vine_page(br, link, url):
                 print 'Tax cost: $%.2f' % cost
                 # We only care about the cost if we're under the $600 limit.
                 # If we're already over it, then show everything.
-                if options.tax and tax < 500.0:
+                if options.tax and current_tax_total < 600.0:
                     # If it's too expensive, then don't bother showing it
-                    if cost >= (600.0 - tax):
+                    if cost >= (600.0 - current_tax_total):
                         print 'Too expensive'
                         return True
         webbrowser.open_new_tab(url % link)
@@ -378,7 +378,7 @@ def open_vine_page(br, link, url):
         return False
 
 def update_tax_estimate(br):
-    global tax
+    global current_tax_total
 
     soup = download_vine_page(br, 'https://www.amazon.com/gp/vine/account')
     if soup:
@@ -392,8 +392,11 @@ def update_tax_estimate(br):
             tag = tags[0].contents[0]
             m = re.search('\$([0-9\.]*)', tag)
             if m:
-                tax = float(m.group(1))
-                print 'Current %4u tax estimate: $%.2f' % (year, tax)
+                current_tax_total = float(m.group(1))
+                print 'Current %4u tax estimate: $%.2f' % (year, current_tax_total)
+                return
+
+    raise Exception()
 
 parser = OptionParser(usage="usage: %prog [options]")
 parser.add_option("-e", dest="email",
