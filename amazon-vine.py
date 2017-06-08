@@ -131,7 +131,7 @@ def login():
     global options
     global useragent
 
-    br = mechanize.Browser(factory = mechanize.RobustFactory())
+    br = mechanize.Browser()
 
     # Load cookies from the selected web browser
     cj2 = getattr(browsercookie, options.browser)()
