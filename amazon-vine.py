@@ -196,7 +196,7 @@ def login():
 
         # Check for image captcha
         # Fixme: if the user waits too long to responde, the script terminates
-        captcha = soup.find('img',{'id':'auth-captcha-image'})
+        captcha = soup.find('img', id='auth-captcha-image')
         if captcha:
             response = br.retrieve(captcha['src'])
             print 'Login captcha detected, saved to', response[0]
@@ -210,7 +210,7 @@ def login():
 
         # Check for account verification
         # Fixme: this is untested.
-        verify = soup.find('div', {'id':'dcq_question_1'})
+        verify = soup.find('div', id='dcq_question_1')
         if verify:
             br.select_form(name='ap_dcq_form')
             text = verify.find('label')
