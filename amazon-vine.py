@@ -292,8 +292,8 @@ def asleep_mac():
 
     try:
         # The pmset program can tell us if the display is on, off, or asleep
-        output = subprocess.check_output(['pmset','-g','powerstate','AppleDisplay'])
-        m = re.search('^AppleDisplay.*USEABLE', output, re.MULTILINE)
+        output = subprocess.check_output(['pmset','-g','powerstate','AppleDisplay','AppleBacklightDisplay'])
+        m = re.search('^Apple.*Display.*USEABLE', output, re.MULTILINE)
         if not m:
             # Display is turned off or asleep
             return True
